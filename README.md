@@ -21,7 +21,7 @@ Windows 解压后双击 LinguaCue.exe；Linux/macOS 解压 tar.gz 后运行对�
 - FIFO 队列，并发数 1–4，默认 2；转换和烧录共享并发上限。
 - 输出原文、译文和双语 UTF-8 SRT，并可在界面中校对后导出。
 - 任务完成后可选择原文、译文或双语 SRT，烧录为新的 H.264/AAC MP4，不覆盖原视频。
-- 默认内置 Noto Sans SC，字号 42；支持字体、字号、文字颜色、描边颜色、描边宽度和底部边距。
+- 默认内置 Noto Sans SC，字号 20；支持字体、字号、文字颜色、描边颜色、描边宽度和底部边距。
 - 自动选择 CUDA → Vulkan → CPU（Windows/Linux），Metal → CPU（macOS）；GPU 初始化失败自动回退 CPU。
 - GPU 平衡档默认 Whisper beam-size/best-of 为 3/3；另有极速 1/1 与质量 5/5。
 - 桌面端只负责界面和队列，转换、翻译、烧录全部由 LinguaCue.Cli 子进程执行。
@@ -45,7 +45,7 @@ Windows 解压后双击 LinguaCue.exe；Linux/macOS 解压 tar.gz 后运行对�
 - Hy-MT2 1.8B-GGUF（腾讯官方）：https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF
 - 直接下载：https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/resolve/main/Hy-MT2-1.8B-Q4_K_M.gguf?download=true
 
-可选高质量模型文件名是 models/translation/Hy-MT2-7B-Q4_K_M.gguf，约 4.62 GiB。
+高质量模型文件名是 models/translation/Hy-MT2-7B-Q4_K_M.gguf，约 4.62 GiB。便携包默认同时复制 1.8B 和 7B；如果磁盘空间有限，可用 `-StandardOnly` 只生成标准模型包。
 
 - Hy-MT2 7B-GGUF（腾讯官方）：https://huggingface.co/tencent/Hy-MT2-7B-GGUF
 - 直接下载：https://huggingface.co/tencent/Hy-MT2-7B-GGUF/resolve/main/Hy-MT2-7B-Q4_K_M.gguf?download=true
@@ -123,7 +123,9 @@ FFmpeg 的具体构建可能是 LGPL 或 GPL；请按实际构建保留对应许
 
     .\tools\Build-Packages.ps1 -ModelSource ".\src\LinguaCue.App\bin\Debug\net8.0\models"
 
-脚本会为 win-x64、linux-x64、osx-x64、osx-arm64 分别执行自包含发布，复制匹配 RID 的模型、字体和原生库，并生成 ZIP。发布包不依赖目标机安装 .NET；macOS 包会额外生成可双击的 LinguaCue.app。
+脚本会为 win-x64、linux-x64、osx-x64、osx-arm64 分别执行自包含发布，复制两个 Hy-MT2 模型、字体和匹配 RID 的原生库，并生成 Windows ZIP 及 Linux/macOS tar.gz。发布包不依赖目标机安装 .NET；macOS 包会额外生成可双击的 LinguaCue.app。
+
+Windows 同时打包 7B 模型时需要安装 7-Zip（脚本会自动寻找 `7z.exe` 或 `7za.exe`），因为系统 `Compress-Archive` 无法稳定写入超过 2 GiB 的 ZIP。
 
 单独发布 Windows：
 
@@ -137,7 +139,7 @@ FFmpeg 的具体构建可能是 LGPL 或 GPL；请按实际构建保留对应许
 
 烧录：
 
-    LinguaCue.Cli burn --input "D:\media\demo.mp4" --subtitle "D:\media\subtitles\demo.bilingual.zh.srt" --output "D:\media\demo.subtitled.mp4" --font-name "Noto Sans SC" --font-size 42 --primary-color "#FFFFFF" --outline-color "#000000" --outline-width 3 --margin-bottom 60 --encoder auto
+    LinguaCue.Cli burn --input "D:\media\demo.mp4" --subtitle "D:\media\subtitles\demo.bilingual.zh.srt" --output "D:\media\demo.subtitled.mp4" --font-name "Noto Sans SC" --font-size 20 --primary-color "#FFFFFF" --outline-color "#000000" --outline-width 3 --margin-bottom 20 --encoder auto
 
 标准输出是 UTF-8 JSON Lines，包含 progress、result、error、canceled 和操作类型；桌面任务日志会记录最终命令、线程数、后端和回退原因。
 

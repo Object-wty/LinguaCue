@@ -105,11 +105,11 @@ internal static class Program
 
         burn 选项：
           --font-name <字体>    默认 Noto Sans SC（应用内置）
-          --font-size <字号>    默认 42
+          --font-size <字号>    默认 20
           --primary-color <色>  #RRGGBB，默认 #FFFFFF
           --outline-color <色>  #RRGGBB，默认 #000000
           --outline-width <值>  默认 3
-          --margin-bottom <值>  默认 60
+          --margin-bottom <值>  默认 20
           --encoder <值>        auto 或 software，默认 auto
 
         通用选项：

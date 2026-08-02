@@ -24,6 +24,7 @@ public sealed class SubtitlePipelineTests
             await File.WriteAllBytesAsync(inputPath, [0, 1, 2, 3]);
             var processRunner = new FakeProcessRunner { ReturnPartialBatchOnce = true };
             var subtitleService = new SrtSubtitleService();
+            var outputLocation = TaskOutputPathPlanner.Reserve(outputRoot, inputPath);
             var pipeline = new SubtitlePipeline(
                 layout,
                 resolver,
@@ -34,12 +35,13 @@ public sealed class SubtitlePipelineTests
 
             var result = await pipeline.RunAsync(new PipelineRequest(
                 inputPath,
-                outputRoot,
+                outputLocation.TaskDirectory,
                 ModelCatalog.SourceLanguages[0],
                 ModelCatalog.TargetLanguages[0],
                 Translate: true,
                 GenerateBilingual: true,
-                ModelCatalog.TranslationProfiles[0]));
+                ModelCatalog.TranslationProfiles[0],
+                OutputBaseName: outputLocation.OutputBaseName));
 
             Assert.Equal(2, result.Cues.Count);
             Assert.Equal("译文-1", result.Cues[0].TranslatedText);
@@ -49,6 +51,8 @@ public sealed class SubtitlePipelineTests
             Assert.True(File.Exists(result.SourceSubtitlePath));
             Assert.True(File.Exists(result.TranslatedSubtitlePath));
             Assert.True(File.Exists(result.BilingualSubtitlePath));
+            Assert.Equal(outputLocation.TaskDirectory, Path.GetDirectoryName(result.SourceSubtitlePath));
+            Assert.Empty(Directory.EnumerateFiles(outputRoot));
             var bilingual = await File.ReadAllTextAsync(result.BilingualSubtitlePath!);
             Assert.Contains("Hello from LinguaCue", bilingual);
             Assert.Contains("译文-1", bilingual);

@@ -64,11 +64,11 @@ public sealed class UserSettingsService(PortableLayout layout)
 
     private static bool IsLegacyDefaultBurnStyle(SubtitleBurnStyle style) =>
         style.FontName == SubtitleBurnStyle.Default.FontName &&
-        style.FontSize == 48 &&
+        style.FontSize is 42 or 48 &&
         style.PrimaryColor == SubtitleBurnStyle.Default.PrimaryColor &&
         style.OutlineColor == SubtitleBurnStyle.Default.OutlineColor &&
         style.OutlineWidth == SubtitleBurnStyle.Default.OutlineWidth &&
-        style.MarginBottom == SubtitleBurnStyle.Default.MarginBottom;
+        style.MarginBottom == 60;
 
     public void Save(LinguaCueUserSettings settings)
     {

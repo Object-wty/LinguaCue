@@ -137,6 +137,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _generateBilingual = true;
 
     [ObservableProperty]
+    private bool _burnAfterConversion;
+
+    [ObservableProperty]
     private bool _isDarkMode;
 
     [ObservableProperty]
@@ -239,11 +242,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 continue;
             }
 
-            var outputBase = ReserveOutputBaseName(inputPath, OutputDirectory);
+            var outputLocation = ReserveTaskOutputLocation(inputPath, OutputDirectory);
             var threads = Math.Max(1, Environment.ProcessorCount / Math.Max(MaxConcurrentTasks, 1));
             var request = new PipelineRequest(
                 Path.GetFullPath(inputPath),
-                Path.GetFullPath(OutputDirectory),
+                outputLocation.TaskDirectory,
                 SelectedSourceLanguage,
                 SelectedTargetLanguage,
                 TranslateEnabled,
@@ -252,7 +255,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 AccelerationMode.Auto,
                 SelectedPerformanceProfile.Value,
                 threads,
-                outputBase);
+                outputLocation.OutputBaseName);
             var task = new SubtitleTaskViewModel(
                 request,
                 workerClient,
@@ -278,19 +281,27 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var selected = await storageService.PickOutputDirectoryAsync();
         if (selected is not null)
         {
-            OutputDirectory = selected;
-            StatusText = "输出目录已更新；仅应用于之后添加的任务";
+            OutputDirectory = Path.GetFullPath(selected);
+            var relocated = RelocatePendingTasks(OutputDirectory);
+            StatusText = relocated > 0
+                ? $"输出目录已更新；已重定位 {relocated} 个待开始任务"
+                : "输出目录已更新";
         }
     }
 
     [RelayCommand(CanExecute = nameof(HasPendingTasks))]
     private void StartPending()
     {
-        foreach (var task in Tasks.Where(task => task.State == SubtitleTaskState.Pending).ToArray())
+        var pendingTasks = Tasks.Where(task => task.State == SubtitleTaskState.Pending).ToArray();
+        var autoBurnAfterConversion = BurnAfterConversion;
+        foreach (var task in pendingTasks)
         {
-            QueueConvert(task);
+            QueueConvert(task, autoBurnAfterConversion);
         }
 
+        StatusText = autoBurnAfterConversion
+            ? $"已启动 {pendingTasks.Length} 个任务；转换完成后将自动烧录字幕"
+            : $"已启动 {pendingTasks.Length} 个任务；仅生成字幕文件";
         RefreshQueueState();
     }
 
@@ -388,9 +399,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         StatusText = $"已导出编辑后的字幕：{path}";
     }
 
-    private void QueueConvert(SubtitleTaskViewModel task)
+    private void QueueConvert(SubtitleTaskViewModel task, bool autoBurnAfterConversion = false)
     {
-        task.MarkQueued();
+        task.MarkQueued(autoBurnAfterConversion: autoBurnAfterConversion);
         scheduler.Enqueue(task.RunConvertAsync, task.QueueCancellationToken);
     }
 
@@ -414,7 +425,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         else
         {
-            QueueConvert(task);
+            QueueConvert(task, task.AutoBurnAfterConversion);
         }
     }
 
@@ -444,24 +455,38 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private string ReserveOutputBaseName(string inputPath, string outputDirectory)
+    private TaskOutputLocation ReserveTaskOutputLocation(string inputPath, string outputRoot)
     {
-        var original = SanitizeFileName(Path.GetFileNameWithoutExtension(inputPath));
-        for (var index = 1; index < 10_000; index++)
+        return TaskOutputPathPlanner.Reserve(
+            outputRoot,
+            inputPath,
+            Tasks.Select(task => task.OutputDirectory));
+    }
+
+    private int RelocatePendingTasks(string outputRoot)
+    {
+        var pendingTasks = Tasks.Where(task => task.State == SubtitleTaskState.Pending).ToArray();
+        var reservedDirectories = Tasks
+            .Where(task => task.State != SubtitleTaskState.Pending)
+            .Select(task => task.OutputDirectory)
+            .ToList();
+        var relocated = 0;
+        foreach (var task in pendingTasks)
         {
-            var candidate = index == 1 ? original : $"{original} ({index})";
-            var reservedByTask = Tasks.Any(task =>
-                PathEquals(task.OutputDirectory, outputDirectory) &&
-                string.Equals(task.Request.OutputBaseName, candidate, PathComparison));
-            var exists = Directory.Exists(outputDirectory) &&
-                         Directory.EnumerateFiles(outputDirectory, candidate + "*.srt").Any();
-            if (!reservedByTask && !exists)
+            var outputLocation = TaskOutputPathPlanner.Reserve(
+                outputRoot,
+                task.InputPath,
+                reservedDirectories);
+            if (task.TryRelocatePendingOutput(
+                    outputLocation.TaskDirectory,
+                    outputLocation.OutputBaseName))
             {
-                return candidate;
+                reservedDirectories.Add(outputLocation.TaskDirectory);
+                relocated++;
             }
         }
 
-        throw new IOException("无法为字幕任务分配不重名的输出名称。");
+        return relocated;
     }
 
     private void TaskOnStateChanged(object? sender, EventArgs e)
@@ -518,10 +543,4 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private static bool PathEquals(string left, string right) =>
         string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), PathComparison);
 
-    private static string SanitizeFileName(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sanitized = new string(value.Select(character => invalid.Contains(character) ? '_' : character).ToArray()).Trim();
-        return string.IsNullOrWhiteSpace(sanitized) ? "subtitles" : sanitized;
-    }
 }

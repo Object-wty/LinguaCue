@@ -399,6 +399,11 @@
           <TextBlock Text="每个任务由独立 LinguaCue.Cli 进程执行，互不影响。" Classes="caption" />
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9">
+          <CheckBox Content="本次队列自动烧录字幕"
+                    IsChecked="{Binding BurnAfterConversion}"
+                    IsEnabled="{Binding HasPendingTasks}"
+                    VerticalAlignment="Center"
+                    ToolTip.Tip="开始队列时为全部待开始任务保存此选择；优先烧录双语字幕，其次译文、原文。" />
           <Button Content="取消全部"
                   Classes="Danger Large"
                   Theme="{DynamicResource OutlineButton}"

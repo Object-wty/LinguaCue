@@ -6,6 +6,37 @@ namespace LinguaCue.Tests;
 public sealed class AssSubtitleServiceTests
 {
     [Fact]
+    public async Task WriteAsync_DefaultStyle_UsesCompactBottomAlignedValues()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var path = Path.Combine(root, "default.ass");
+            var cues = new[]
+            {
+                new SubtitleCue(1, TimeSpan.Zero, TimeSpan.FromSeconds(1), "Default style")
+            };
+
+            await new AssSubtitleService().WriteAsync(
+                path,
+                cues,
+                1920,
+                1080,
+                SubtitleBurnStyle.Default);
+            var content = await File.ReadAllTextAsync(path);
+
+            Assert.Equal(20, SubtitleBurnStyle.Default.FontSize);
+            Assert.Equal(20, SubtitleBurnStyle.Default.MarginBottom);
+            Assert.Contains("Noto Sans SC,20,&H00FFFFFF", content);
+            Assert.Contains(",0,2,40,40,20,1", content);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task WriteAsync_UsesVideoCanvasUtf8StyleAndEscapesMultilineText()
     {
         var root = CreateTemporaryDirectory();

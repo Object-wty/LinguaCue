@@ -46,6 +46,7 @@ assets/fonts/files/
 **/*.mkv
 **/*.mov
 **/*.avi
+assets/test-videos/**/*.srt
 **/*.wav
 **/*.mp3
 **/*.zip

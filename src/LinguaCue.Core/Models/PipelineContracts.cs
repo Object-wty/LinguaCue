@@ -66,11 +66,11 @@ public sealed record SubtitleBurnStyle(
 {
     public static SubtitleBurnStyle Default { get; } = new(
         "Noto Sans SC",
-        42,
+        20,
         "#FFFFFF",
         "#000000",
         3,
-        60);
+        20);
 }
 
 public sealed record BurnRequest(

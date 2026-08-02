@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LinguaCue.Infrastructure;
 using LinguaCue.Models;
 using LinguaCue.Services;
 
@@ -63,7 +64,7 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
 
     public event EventHandler? StateChanged;
 
-    public PipelineRequest Request { get; }
+    public PipelineRequest Request { get; private set; }
 
     public string InputPath => Request.InputPath;
 
@@ -98,6 +99,8 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
     public bool HasBurnedVideo => !string.IsNullOrWhiteSpace(BurnedVideoPath);
 
     public bool HasConversionResult => pipelineResult is not null;
+
+    public bool AutoBurnAfterConversion { get; private set; }
 
     public CancellationToken QueueCancellationToken => cancellation?.Token ?? CancellationToken.None;
 
@@ -148,7 +151,24 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
 
     partial void OnSelectedSubtitleTrackChanged(SubtitleTrackOption? value) => NotifyCommandState();
 
-    public void MarkQueued(bool burn = false)
+    public bool TryRelocatePendingOutput(string outputDirectory, string outputBaseName)
+    {
+        if (State != SubtitleTaskState.Pending)
+        {
+            return false;
+        }
+
+        Request = Request with
+        {
+            OutputDirectory = Path.GetFullPath(outputDirectory),
+            OutputBaseName = TaskOutputPathPlanner.SanitizeFileName(outputBaseName)
+        };
+        OnPropertyChanged(nameof(Request));
+        OnPropertyChanged(nameof(OutputDirectory));
+        return true;
+    }
+
+    public void MarkQueued(bool burn = false, bool autoBurnAfterConversion = false)
     {
         cancellation?.Dispose();
         cancellation = new CancellationTokenSource();
@@ -161,6 +181,11 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
                 saveBurnDefaults(queuedBurnStyle);
             }
         }
+        else
+        {
+            AutoBurnAfterConversion = autoBurnAfterConversion;
+        }
+
         State = burn ? SubtitleTaskState.BurnQueued : SubtitleTaskState.Queued;
         StatusText = burn ? "烧录排队中" : "排队中";
         StageText = "等待可用处理槽位";
@@ -191,6 +216,7 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
             NotifyStateChanged();
         });
 
+        var conversionSucceeded = false;
         try
         {
             var result = await workerClient.RunAsync(
@@ -199,6 +225,7 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
                 AppendLog,
                 cancellation.Token);
             await OnUiAsync(() => ApplyResult(result));
+            conversionSucceeded = true;
         }
         catch (OperationCanceledException)
         {
@@ -224,6 +251,32 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
         {
             stopwatch.Stop();
             await OnUiAsync(NotifyStateChanged);
+        }
+
+        if (!conversionSucceeded || !AutoBurnAfterConversion)
+        {
+            return;
+        }
+
+        var burnQueued = false;
+        await OnUiAsync(() =>
+        {
+            if (!CanBurn)
+            {
+                StageText = "未找到可烧录的字幕，已跳过自动烧录";
+                AppendLogOnUi("本次队列已启用自动烧录，但没有可用字幕轨道，已跳过。");
+                NotifyStateChanged();
+                return;
+            }
+
+            AppendLogOnUi("本次队列已启用自动烧录，正在继续烧录所选字幕。");
+            MarkQueued(burn: true);
+            burnQueued = true;
+        });
+
+        if (burnQueued)
+        {
+            await RunBurnAsync();
         }
     }
 

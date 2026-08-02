@@ -61,7 +61,7 @@ public sealed class SubtitlePipeline(
                 throw new InvalidDataException("Whisper 未生成可用字幕。请检查音轨、语言与模型。 ");
             }
 
-            var safeBaseName = SanitizeFileName(
+            var safeBaseName = TaskOutputPathPlanner.SanitizeFileName(
                 string.IsNullOrWhiteSpace(request.OutputBaseName)
                     ? Path.GetFileNameWithoutExtension(request.InputPath)
                     : request.OutputBaseName);
@@ -177,10 +177,4 @@ public sealed class SubtitlePipeline(
         }
     }
 
-    private static string SanitizeFileName(string value)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var sanitized = new string(value.Select(character => invalid.Contains(character) ? '_' : character).ToArray()).Trim();
-        return string.IsNullOrWhiteSpace(sanitized) ? "subtitles" : sanitized;
-    }
 }

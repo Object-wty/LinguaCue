@@ -4,6 +4,7 @@ param(
     [string]$RuntimeSource = (Join-Path $PSScriptRoot '..\runtimes'),
     [string]$OutputRoot = (Join-Path $PSScriptRoot '..\artifacts\packages'),
     [switch]$IncludeQualityModel,
+    [switch]$StandardOnly,
     [switch]$SkipExisting
 )
 
@@ -17,6 +18,7 @@ $runtimeRoot = [System.IO.Path]::GetFullPath($RuntimeSource)
 $outputRootPath = [System.IO.Path]::GetFullPath($OutputRoot)
 $rids = @('win-x64', 'linux-x64', 'osx-x64', 'osx-arm64')
 $tarCommand = (Get-Command tar -ErrorAction SilentlyContinue).Source
+$sevenZipCommand = (Get-Command 7za.exe,7z.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
 if ($IsWindows -and (Test-Path -LiteralPath 'C:\Program Files\Git\usr\bin\tar.exe')) {
     # Windows 10's bsdtar does not support --mode; Git for Windows ships GNU tar.
     $tarCommand = 'C:\Program Files\Git\usr\bin\tar.exe'
@@ -67,7 +69,7 @@ function Copy-Models([string]$Destination) {
     Copy-Item -LiteralPath $speech -Destination $speechDestination -Force
     Copy-Item -LiteralPath $standard -Destination $translationDestination -Force
 
-    if ($IncludeQualityModel) {
+    if ($IncludeQualityModel -or -not $StandardOnly) {
         $quality = Join-Path $modelRoot 'translation\Hy-MT2-7B-Q4_K_M.gguf'
         Assert-File $quality 'Hy-MT2 7B 高质量模型'
         Copy-Item -LiteralPath $quality -Destination $translationDestination -Force
@@ -139,7 +141,21 @@ foreach ($rid in $rids) {
 
     Write-Host "Packing $archive ..."
     if ($rid -eq 'win-x64') {
-        Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -CompressionLevel Optimal
+        if (-not [string]::IsNullOrWhiteSpace($sevenZipCommand)) {
+            # Compress-Archive cannot write ZIP64 entries larger than its stream limit.
+            Push-Location $stage
+            try {
+                & $sevenZipCommand a -tzip -mx=1 $archive '*'
+            }
+            finally {
+                Pop-Location
+            }
+            if ($LASTEXITCODE -ne 0) {
+                throw "7-Zip 打包失败：$rid"
+            }
+        } else {
+            Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive -CompressionLevel Optimal
+        }
     } else {
         if ([string]::IsNullOrWhiteSpace($tarCommand)) {
             throw '找不到 tar，无法生成 Linux/macOS 归档。'
