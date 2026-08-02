@@ -12,14 +12,15 @@ public sealed class TaskOutputPathPlannerTests
         {
             Directory.CreateDirectory(Path.Combine(outputRoot, "lesson"));
             var reserved = Path.Combine(outputRoot, "lesson (2)");
+            File.WriteAllText(Path.Combine(outputRoot, "lesson (3)"), "occupied");
 
             var location = TaskOutputPathPlanner.Reserve(
                 outputRoot,
                 Path.Combine("D:\\imports", "lesson.mp4"),
                 [reserved]);
 
-            Assert.Equal(Path.Combine(outputRoot, "lesson (3)"), location.TaskDirectory);
-            Assert.Equal("lesson (3)", location.OutputBaseName);
+            Assert.Equal(Path.Combine(outputRoot, "lesson (4)"), location.TaskDirectory);
+            Assert.Equal("lesson (4)", location.OutputBaseName);
             Assert.Equal(Path.GetFullPath(outputRoot), Path.GetDirectoryName(location.TaskDirectory));
         }
         finally

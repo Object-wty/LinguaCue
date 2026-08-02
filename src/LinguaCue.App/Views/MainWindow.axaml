@@ -366,7 +366,7 @@
                         <TextBox Grid.Column="1" Text="{Binding SelectedTask.BurnOutlineColor}" PlaceholderText="#000000" />
                       </Grid>
                     </Grid>
-                    <TextBlock Text="任务完成后，在任务卡片点击“烧录字幕”。输出为新的 .subtitled.mp4，原视频不会被覆盖。"
+                    <TextBlock Text="开始队列前可勾选自动烧录；未启用时仍可在任务卡片手动烧录。输出为新的 .subtitled.mp4，原视频不会被覆盖。"
                                Classes="caption"
                                TextWrapping="Wrap" />
                   </StackPanel>

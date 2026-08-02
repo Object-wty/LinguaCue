@@ -292,6 +292,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasPendingTasks))]
     private void StartPending()
     {
+        try
+        {
+            RelocatePendingTasks(OutputDirectory);
+        }
+        catch (Exception exception) when (exception is ArgumentException or IOException or NotSupportedException)
+        {
+            StatusText = $"输出目录无效：{exception.Message}";
+            return;
+        }
+
         var pendingTasks = Tasks.Where(task => task.State == SubtitleTaskState.Pending).ToArray();
         var autoBurnAfterConversion = BurnAfterConversion;
         foreach (var task in pendingTasks)

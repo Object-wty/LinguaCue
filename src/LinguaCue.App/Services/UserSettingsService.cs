@@ -62,13 +62,15 @@ public sealed class UserSettingsService(PortableLayout layout)
         }
     }
 
-    private static bool IsLegacyDefaultBurnStyle(SubtitleBurnStyle style) =>
-        style.FontName == SubtitleBurnStyle.Default.FontName &&
-        style.FontSize is 42 or 48 &&
-        style.PrimaryColor == SubtitleBurnStyle.Default.PrimaryColor &&
-        style.OutlineColor == SubtitleBurnStyle.Default.OutlineColor &&
-        style.OutlineWidth == SubtitleBurnStyle.Default.OutlineWidth &&
-        style.MarginBottom == 60;
+    private static bool IsLegacyDefaultBurnStyle(SubtitleBurnStyle style) => style is
+    {
+        FontName: "Noto Sans SC",
+        FontSize: 42 or 48,
+        PrimaryColor: "#FFFFFF",
+        OutlineColor: "#000000",
+        OutlineWidth: 3,
+        MarginBottom: 60
+    };
 
     public void Save(LinguaCueUserSettings settings)
     {

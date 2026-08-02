@@ -47,7 +47,9 @@ public static class TaskOutputPathPlanner
         {
             var candidate = AddCollisionSuffix(originalName, index);
             var taskDirectory = Path.GetFullPath(Path.Combine(resolvedRoot, candidate));
-            if (!reserved.Contains(NormalizeDirectory(taskDirectory)) && !Directory.Exists(taskDirectory))
+            if (!reserved.Contains(NormalizeDirectory(taskDirectory)) &&
+                !Directory.Exists(taskDirectory) &&
+                !File.Exists(taskDirectory))
             {
                 return new TaskOutputLocation(taskDirectory, candidate);
             }
