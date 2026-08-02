@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
+    <RootNamespace>LinguaCue</RootNamespace>
+    <AssemblyName>LinguaCue</AssemblyName>
+    <Product>LinguaCue</Product>
+    <Description>Fully offline subtitle transcription and translation workspace.</Description>
+    <Version>0.1.0</Version>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- LinguaCue.Cli is a build-order reference, not an in-process executable reference.
+         PublishCliWorker publishes it separately with the desktop RID/self-contained settings. -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Semi.Avalonia" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LinguaCue.Core\LinguaCue.Core.csproj" />
+    <ProjectReference
+      Include="..\LinguaCue.Cli\LinguaCue.Cli.csproj"
+      ReferenceOutputAssembly="false"
+      GlobalPropertiesToRemove="PublishProfile" />
+    <None Include="..\..\portable.flag" Link="portable.flag" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\models\**\*" Condition="'$(IncludeBundledAssets)' != 'false'">
+      <Link>models\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\..\runtimes\**\*" Condition="'$(IncludeBundledAssets)' != 'false'">
+      <Link>runtimes\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\..\assets\**\*" Condition="'$(IncludeBundledAssets)' != 'false'">
+      <Link>assets\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+    <Content Include="..\..\LICENSE" Link="LICENSE" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\..\THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <CliOutputDirectory>$(MSBuildProjectDirectory)\..\LinguaCue.Cli\bin\$(Configuration)\$(TargetFramework)\</CliOutputDirectory>
+    <CliOutputDirectory Condition="'$(RuntimeIdentifier)' != ''">$(MSBuildProjectDirectory)\..\LinguaCue.Cli\bin\$(Configuration)\$(TargetFramework)\$(RuntimeIdentifier)\</CliOutputDirectory>
+  </PropertyGroup>
+
+  <Target Name="CopyCliWorkerToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <CliWorkerBuildFiles Include="$(CliOutputDirectory)LinguaCue.Cli*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(CliWorkerBuildFiles)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="PublishCliWorker" AfterTargets="Publish">
+    <MSBuild
+      Projects="..\LinguaCue.Cli\LinguaCue.Cli.csproj"
+      Targets="Publish"
+      RemoveProperties="PublishProfile"
+      Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework);RuntimeIdentifier=$(RuntimeIdentifier);SelfContained=$(SelfContained);PublishSingleFile=false;PublishTrimmed=false;PublishDir=$([System.IO.Path]::GetFullPath('$(PublishDir)'))" />
+  </Target>
+</Project>

@@ -1,0 +1,418 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:LinguaCue.ViewModels"
+        x:Class="LinguaCue.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        mc:Ignorable="d"
+        d:DesignWidth="1320"
+        d:DesignHeight="840"
+        Title="LinguaCue · 语幕"
+        Width="1320"
+        Height="840"
+        MinWidth="1080"
+        MinHeight="720"
+        WindowStartupLocation="CenterScreen">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+    <Border Grid.Row="0"
+            Padding="24,14"
+            BorderBrush="{DynamicResource TabControlBorderBrush}"
+            BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+        <Border Width="44"
+                Height="44"
+                CornerRadius="12"
+                Background="{DynamicResource ButtonSolidPrimaryBackground}">
+          <TextBlock Text="LC"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     Foreground="{DynamicResource ButtonSolidForeground}"
+                     FontSize="15"
+                     FontWeight="Bold" />
+        </Border>
+
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+          <TextBlock Text="LinguaCue · 语幕" Classes="pageTitle" />
+          <TextBlock Text="完全离线的多任务 AI 字幕工作台" Classes="muted" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
+          <Border Classes="statusPill" Background="{DynamicResource ButtonSolidSuccessBackground}">
+            <TextBlock Text="● 本机处理 · 独立进程 · 零上传"
+                       Foreground="{DynamicResource ButtonSolidForeground}"
+                       FontWeight="SemiBold" />
+          </Border>
+          <ToggleSwitch Content="深色模式"
+                        IsChecked="{Binding IsDarkMode}"
+                        OnContent="开"
+                        OffContent="关" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="1"
+          Margin="24,18"
+          ColumnDefinitions="350,*"
+          ColumnSpacing="18">
+      <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="13" Margin="0,0,4,0">
+          <Border Theme="{DynamicResource CardBorder}" Classes="Shadow">
+            <StackPanel Spacing="12">
+              <StackPanel Spacing="3">
+                <TextBlock Text="1 · 新任务设置" Classes="sectionTitle" />
+                <TextBlock Text="设置只在添加视频时保存为任务快照" Classes="caption" />
+              </StackPanel>
+
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox Text="{Binding OutputDirectory}"
+                         IsReadOnly="True"
+                         Classes="Bordered"
+                         PlaceholderText="默认使用第一个视频所在目录" />
+                <Button Grid.Column="1"
+                        Content="输出目录…"
+                        Theme="{DynamicResource OutlineButton}"
+                        Command="{Binding PickOutputDirectoryCommand}" />
+              </Grid>
+
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <StackPanel Spacing="5">
+                  <TextBlock Text="源语言" Classes="caption" />
+                  <ComboBox ItemsSource="{Binding SourceLanguages}"
+                            SelectedItem="{Binding SelectedSourceLanguage}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5">
+                  <TextBlock Text="目标语言" Classes="caption" />
+                  <ComboBox ItemsSource="{Binding TargetLanguages}"
+                            SelectedItem="{Binding SelectedTargetLanguage}"
+                            IsEnabled="{Binding TranslateEnabled}" />
+                </StackPanel>
+              </Grid>
+
+              <StackPanel Spacing="7">
+                <CheckBox Content="启用 Hy-MT2 离线翻译"
+                          IsChecked="{Binding TranslateEnabled}" />
+                <CheckBox Content="同时生成原文 + 译文双语 SRT"
+                          IsChecked="{Binding GenerateBilingual}"
+                          IsEnabled="{Binding TranslateEnabled}" />
+              </StackPanel>
+
+              <Button Content="添加多个视频…"
+                      Classes="Large"
+                      Theme="{DynamicResource SolidButton}"
+                      Command="{Binding PickInputCommand}" />
+            </StackPanel>
+          </Border>
+
+          <Border Theme="{DynamicResource CardBorder}">
+            <StackPanel Spacing="11">
+              <StackPanel Spacing="3">
+                <TextBlock Text="2 · 性能与模型" Classes="sectionTitle" />
+                <TextBlock Text="默认自动选择 CUDA / Vulkan / Metal，失败回退 CPU" Classes="caption" TextWrapping="Wrap" />
+              </StackPanel>
+
+              <ComboBox ItemsSource="{Binding PerformanceProfiles}"
+                        SelectedItem="{Binding SelectedPerformanceProfile}" />
+              <TextBlock Text="{Binding SelectedPerformanceProfile.Description}"
+                         TextWrapping="Wrap"
+                         Classes="caption" />
+
+              <ComboBox ItemsSource="{Binding TranslationModels}"
+                        SelectedItem="{Binding SelectedTranslationModel}"
+                        IsEnabled="{Binding TranslateEnabled}" />
+              <TextBlock Text="{Binding SelectedTranslationModel.Description}"
+                         TextWrapping="Wrap"
+                         Classes="caption" />
+
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Content="导入 Whisper"
+                        Theme="{DynamicResource OutlineButton}"
+                        Command="{Binding ImportWhisperModelCommand}" />
+                <Button Grid.Column="1"
+                        Content="导入翻译模型"
+                        Theme="{DynamicResource OutlineButton}"
+                        Command="{Binding ImportTranslationModelCommand}" />
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <Border Theme="{DynamicResource CardBorder}">
+            <StackPanel Spacing="9">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="3 · 本地环境" Classes="sectionTitle" />
+                  <TextBlock Text="{Binding EnvironmentSummary}" Classes="caption" />
+                </StackPanel>
+                <Button Grid.Column="1"
+                        Content="刷新"
+                        Classes="Small"
+                        Theme="{DynamicResource BorderlessButton}"
+                        Command="{Binding RefreshEnvironmentCommand}" />
+              </Grid>
+
+              <ListBox ItemsSource="{Binding EnvironmentItems}"
+                       Height="150"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ComponentStatusViewModel">
+                    <Grid ColumnDefinitions="Auto,105,*" ColumnSpacing="7" Margin="0,2">
+                      <TextBlock Text="●" Opacity="0.65" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding Name}"
+                                 FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="2"
+                                 Text="{Binding StateText}"
+                                 HorizontalAlignment="Right"
+                                 Classes="caption" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <Grid Grid.Column="1" RowDefinitions="Auto,300,*" RowSpacing="13">
+        <Border Grid.Row="0" Theme="{DynamicResource CardBorder}" Classes="Shadow">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <StackPanel Spacing="3">
+              <TextBlock Text="多任务队列" Classes="sectionTitle" />
+              <TextBlock Text="{Binding QueueSummary}" Classes="caption" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <TextBlock Text="同时处理" Classes="caption" VerticalAlignment="Center" />
+              <ComboBox ItemsSource="{Binding ConcurrencyOptions}"
+                        SelectedItem="{Binding MaxConcurrentTasks}"
+                        Width="72" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Theme="{DynamicResource CardBorder}" Classes="Shadow">
+          <Grid>
+            <Border IsVisible="{Binding NoTasks}"
+                    BorderBrush="{DynamicResource TabControlBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="24">
+              <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                <TextBlock Text="还没有任务" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Text="点击“添加多个视频”，每个视频都会拥有独立进度、日志、取消和烧录操作。"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           Classes="muted" />
+              </StackPanel>
+            </Border>
+
+            <ListBox IsVisible="{Binding HasTasks}"
+                     ItemsSource="{Binding Tasks}"
+                     SelectedItem="{Binding SelectedTask}"
+                     SelectionMode="Single"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:SubtitleTaskViewModel">
+                  <Border Theme="{DynamicResource CardBorder}" Margin="2,4" Padding="12">
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <StackPanel Spacing="2">
+                          <TextBlock Text="{Binding FileName}"
+                                     FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" />
+                          <TextBlock Text="{Binding ConfigurationText}"
+                                     Classes="caption"
+                                     TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding ElapsedText}" Classes="caption" />
+                        </StackPanel>
+                      </Grid>
+
+                      <Grid Grid.Row="1" ColumnDefinitions="*,52" ColumnSpacing="8">
+                        <ProgressBar Value="{Binding ProgressValue}"
+                                     Maximum="100"
+                                     ShowProgressText="False"
+                                     Classes="Large" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding ProgressValue, StringFormat={}{0:F0}%}"
+                                   HorizontalAlignment="Right"
+                                   Classes="caption" />
+                      </Grid>
+
+                      <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <TextBlock Text="{Binding StageText}"
+                                   Classes="caption"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="7">
+                          <Button Content="取消"
+                                  Classes="Danger Small"
+                                  Theme="{DynamicResource OutlineButton}"
+                                  Command="{Binding CancelCommand}"
+                                  IsVisible="{Binding CanCancel}" />
+                          <Button Content="重试"
+                                  Classes="Warning Small"
+                                  Theme="{DynamicResource OutlineButton}"
+                                  Command="{Binding RetryCommand}"
+                                  IsVisible="{Binding CanRetry}" />
+                          <Button Content="烧录字幕"
+                                  Classes="Success Small"
+                                  Theme="{DynamicResource OutlineButton}"
+                                  Command="{Binding BurnCommand}"
+                                  IsEnabled="{Binding CanBurn}" />
+                        </StackPanel>
+                      </Grid>
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Theme="{DynamicResource CardBorder}" Classes="Shadow">
+          <Grid RowDefinitions="Auto,*">
+            <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,10">
+              <StackPanel Spacing="2">
+                <TextBlock Text="任务详情" Classes="sectionTitle" />
+                <TextBlock Text="{Binding SelectedTask.FileName}" Classes="caption" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
+                <TextBlock Text="{Binding SelectedTask.CueCountText}" Classes="caption" />
+                <Button Content="导出编辑字幕"
+                        Theme="{DynamicResource OutlineButton}"
+                        Command="{Binding ExportSubtitlesCommand}" />
+              </StackPanel>
+            </Grid>
+
+            <TabControl Grid.Row="1" Theme="{DynamicResource LineTabControl}">
+              <TabItem Header="字幕预览">
+                <Grid Margin="0,10,0,0">
+                  <Border IsVisible="{Binding SelectedTask.NoCues}"
+                          BorderBrush="{DynamicResource TabControlBorderBrush}"
+                          BorderThickness="1"
+                          CornerRadius="10"
+                          Padding="18">
+                    <TextBlock Text="选择一个已完成的任务后，可在这里校对字幕。"
+                               TextAlignment="Center"
+                               VerticalAlignment="Center"
+                               Classes="muted" />
+                  </Border>
+
+                  <ListBox IsVisible="{Binding SelectedTask.HasCues}"
+                           ItemsSource="{Binding SelectedTask.Cues}"
+                           SelectedItem="{Binding SelectedTask.SelectedCue}">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:SubtitleCueViewModel">
+                        <Grid ColumnDefinitions="72,*"
+                              RowDefinitions="Auto,Auto"
+                              ColumnSpacing="12"
+                              RowSpacing="4"
+                              Margin="2,6">
+                          <StackPanel Grid.RowSpan="2" Spacing="3">
+                            <TextBlock Text="{Binding IndexLabel}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding TimeRange}" FontSize="10" TextWrapping="Wrap" Classes="muted" />
+                          </StackPanel>
+                          <TextBox Grid.Column="1"
+                                   Text="{Binding SourceText}"
+                                   AcceptsReturn="True"
+                                   TextWrapping="Wrap"
+                                   Theme="{DynamicResource LooklessTextBox}" />
+                          <TextBox Grid.Row="1"
+                                   Grid.Column="1"
+                                   Text="{Binding TranslatedText}"
+                                   AcceptsReturn="True"
+                                   TextWrapping="Wrap"
+                                   Theme="{DynamicResource LooklessTextBox}"
+                                   IsVisible="{Binding HasTranslation}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </Grid>
+              </TabItem>
+
+              <TabItem Header="烧录设置">
+                <ScrollViewer Margin="0,12,0,0" VerticalScrollBarVisibility="Auto">
+                  <StackPanel Spacing="11" MaxWidth="720">
+                    <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="9">
+                      <TextBlock Text="烧录字幕" Classes="caption" VerticalAlignment="Center" />
+                      <ComboBox Grid.Column="1"
+                                ItemsSource="{Binding SelectedTask.SubtitleTracks}"
+                                SelectedItem="{Binding SelectedTask.SelectedSubtitleTrack}" />
+
+                      <TextBlock Grid.Row="1" Text="字体" Classes="caption" VerticalAlignment="Center" />
+                      <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SelectedTask.BurnFontName}" />
+
+                      <TextBlock Grid.Row="2" Text="字号 / 描边 / 底部边距" Classes="caption" VerticalAlignment="Center" />
+                      <Grid Grid.Row="2" Grid.Column="1" ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                        <NumericUpDown Value="{Binding SelectedTask.BurnFontSize}"
+                                       Minimum="8" Maximum="240" Increment="2" FormatString="F0" />
+                        <NumericUpDown Grid.Column="1"
+                                       Value="{Binding SelectedTask.BurnOutlineWidth}"
+                                       Minimum="0" Maximum="20" Increment="0.5" FormatString="F1" />
+                        <NumericUpDown Grid.Column="2"
+                                       Value="{Binding SelectedTask.BurnMarginBottom}"
+                                       Minimum="0" Maximum="2000" Increment="5" FormatString="F0" />
+                      </Grid>
+
+                      <TextBlock Grid.Row="3" Text="文字颜色 / 描边颜色" Classes="caption" VerticalAlignment="Center" />
+                      <Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <TextBox Text="{Binding SelectedTask.BurnPrimaryColor}" PlaceholderText="#FFFFFF" />
+                        <TextBox Grid.Column="1" Text="{Binding SelectedTask.BurnOutlineColor}" PlaceholderText="#000000" />
+                      </Grid>
+                    </Grid>
+                    <TextBlock Text="任务完成后，在任务卡片点击“烧录字幕”。输出为新的 .subtitled.mp4，原视频不会被覆盖。"
+                               Classes="caption"
+                               TextWrapping="Wrap" />
+                  </StackPanel>
+                </ScrollViewer>
+              </TabItem>
+
+              <TabItem Header="运行日志">
+                <TextBox Margin="0,10,0,0"
+                         Text="{Binding SelectedTask.LogText}"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         FontFamily="Cascadia Mono, Consolas, monospace"
+                         FontSize="12"
+                         VerticalContentAlignment="Top" />
+              </TabItem>
+            </TabControl>
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+
+    <Border Grid.Row="2"
+            Padding="24,13"
+            BorderBrush="{DynamicResource TabControlBorderBrush}"
+            BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="18">
+        <StackPanel Spacing="2" VerticalAlignment="Center">
+          <TextBlock Text="{Binding StatusText}" FontWeight="SemiBold" />
+          <TextBlock Text="每个任务由独立 LinguaCue.Cli 进程执行，互不影响。" Classes="caption" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="9">
+          <Button Content="取消全部"
+                  Classes="Danger Large"
+                  Theme="{DynamicResource OutlineButton}"
+                  Command="{Binding CancelAllCommand}" />
+          <Button Content="添加多个视频"
+                  Classes="Large"
+                  Theme="{DynamicResource OutlineButton}"
+                  Command="{Binding PickInputCommand}" />
+          <Button Content="开始队列"
+                  Classes="Large"
+                  Theme="{DynamicResource SolidButton}"
+                  Command="{Binding StartPendingCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

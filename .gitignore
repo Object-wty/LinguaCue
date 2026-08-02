@@ -1,0 +1,59 @@
+# Source repository policy: keep source and documentation in Git; keep local
+# model weights, native binaries, media, and generated packages out of Git.
+
+# .NET / IDE generated files
+**/bin/
+**/obj/
+.vs/
+.idea/
+.packages/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Generated, downloaded, or local-only project data
+artifacts/
+environment/
+data/
+logs/
+temp/
+downloads/
+*.tmp
+*.log
+
+# Model weights (download locally; never commit)
+models/**/*.bin
+models/**/*.gguf
+models/**/*.safetensors
+!models/**/README.md
+
+# Native runtime files (download locally; keep the directory guide)
+runtimes/**/*
+!runtimes/README.md
+
+# Bundled binary assets and platform libraries
+assets/fonts/files/
+**/*.exe
+**/*.dll
+**/*.dylib
+**/*.so
+**/*.so.*
+**/*.bin
+**/*.gguf
+**/*.mp4
+**/*.mkv
+**/*.mov
+**/*.avi
+**/*.wav
+**/*.mp3
+**/*.zip
+**/*.7z
+**/*.tar.gz
+**/*.tar.xz
+
+# Publish/package output
+publish/
+packages/
+*.nupkg
