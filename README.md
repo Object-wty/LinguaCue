@@ -115,9 +115,15 @@ FFmpeg 的具体构建可能是 LGPL 或 GPL；请按实际构建保留对应许
 
 ## 生成四个平台便携包
 
+最简单的方式是在仓库根目录直接双击 `Build-Packages.cmd`。窗口会保留到任务结束，成功的文件位于 `artifacts/packages/`。脚本会自动寻找 `models/`、`artifacts/model-source/`、Debug/Release 输出目录或 `environment/` 中的模型。
+
 先按上面的目录结构准备模型和原生库，然后在 Windows PowerShell 执行：
 
     .\tools\Build-Packages.ps1 -ModelSource ".\models" -RuntimeSource ".\runtimes" -OutputRoot ".\artifacts\packages"
+
+也可以在 PowerShell 中直接运行（不指定 `-ModelSource` 时自动寻找模型）：
+
+    pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-Packages.ps1
 
 如果模型暂时放在 Debug 输出目录，可指定：
 

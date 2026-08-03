@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$ModelSource = (Join-Path $PSScriptRoot '..\models'),
+    [string]$ModelSource = '',
     [string]$RuntimeSource = (Join-Path $PSScriptRoot '..\runtimes'),
     [string]$OutputRoot = (Join-Path $PSScriptRoot '..\artifacts\packages'),
     [switch]$IncludeQualityModel,
@@ -13,13 +13,62 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $project = Join-Path $repoRoot 'src\LinguaCue.App\LinguaCue.App.csproj'
+
+function Has-ModelFiles([string]$Root) {
+    $nested = @(
+        (Join-Path $Root 'speech\ggml-large-v3-turbo.bin'),
+        (Join-Path $Root 'translation\Hy-MT2-1.8B-Q4_K_M.gguf'),
+        (Join-Path $Root 'translation\Hy-MT2-7B-Q4_K_M.gguf'))
+    $nestedComplete = $true
+    foreach ($path in $nested) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            $nestedComplete = $false
+            break
+        }
+    }
+    if ($nestedComplete) {
+        return $true
+    }
+
+    $flat = @(
+        (Join-Path $Root 'ggml-large-v3-turbo.bin'),
+        (Join-Path $Root 'Hy-MT2-1.8B-Q4_K_M.gguf'),
+        (Join-Path $Root 'Hy-MT2-7B-Q4_K_M.gguf'))
+    foreach ($path in $flat) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            return $false
+        }
+    }
+    return $true
+}
+
+if ([string]::IsNullOrWhiteSpace($ModelSource)) {
+    $modelCandidates = @(
+        (Join-Path $repoRoot 'models'),
+        (Join-Path $repoRoot 'artifacts\model-source'),
+        (Join-Path $repoRoot 'src\LinguaCue.App\bin\Debug\net8.0\models'),
+        (Join-Path $repoRoot 'src\LinguaCue.App\bin\Release\net8.0\models'),
+        (Join-Path $repoRoot 'environment'))
+    foreach ($candidate in $modelCandidates) {
+        if (Has-ModelFiles $candidate) {
+            $ModelSource = $candidate
+            break
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($ModelSource)) {
+        $ModelSource = Join-Path $repoRoot 'models'
+    }
+    Write-Host "自动选择模型目录：$ModelSource"
+}
+
 $modelRoot = [System.IO.Path]::GetFullPath($ModelSource)
 $runtimeRoot = [System.IO.Path]::GetFullPath($RuntimeSource)
 $outputRootPath = [System.IO.Path]::GetFullPath($OutputRoot)
 $rids = @('win-x64', 'linux-x64', 'osx-x64', 'osx-arm64')
 $tarCommand = (Get-Command tar -ErrorAction SilentlyContinue).Source
 $sevenZipCommand = (Get-Command 7za.exe,7z.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
-if ($IsWindows -and (Test-Path -LiteralPath 'C:\Program Files\Git\usr\bin\tar.exe')) {
+$isWindowsHost = $env:OS -eq 'Windows_NT'
+if ($isWindowsHost -and (Test-Path -LiteralPath 'C:\Program Files\Git\usr\bin\tar.exe')) {
     # Windows 10's bsdtar does not support --mode; Git for Windows ships GNU tar.
     $tarCommand = 'C:\Program Files\Git\usr\bin\tar.exe'
     $env:PATH = "C:\Program Files\Git\usr\bin;$env:PATH"
@@ -60,6 +109,12 @@ function Copy-CommonAssets([string]$Destination) {
 function Copy-Models([string]$Destination) {
     $speech = Join-Path $modelRoot 'speech\ggml-large-v3-turbo.bin'
     $standard = Join-Path $modelRoot 'translation\Hy-MT2-1.8B-Q4_K_M.gguf'
+    $quality = Join-Path $modelRoot 'translation\Hy-MT2-7B-Q4_K_M.gguf'
+    if (-not (Test-Path -LiteralPath $speech -PathType Leaf)) {
+        $speech = Join-Path $modelRoot 'ggml-large-v3-turbo.bin'
+        $standard = Join-Path $modelRoot 'Hy-MT2-1.8B-Q4_K_M.gguf'
+        $quality = Join-Path $modelRoot 'Hy-MT2-7B-Q4_K_M.gguf'
+    }
     Assert-File $speech 'Whisper large-v3-turbo 模型'
     Assert-File $standard 'Hy-MT2 1.8B 标准模型'
 
@@ -70,7 +125,6 @@ function Copy-Models([string]$Destination) {
     Copy-Item -LiteralPath $standard -Destination $translationDestination -Force
 
     if ($IncludeQualityModel -or -not $StandardOnly) {
-        $quality = Join-Path $modelRoot 'translation\Hy-MT2-7B-Q4_K_M.gguf'
         Assert-File $quality 'Hy-MT2 7B 高质量模型'
         Copy-Item -LiteralPath $quality -Destination $translationDestination -Force
     }
