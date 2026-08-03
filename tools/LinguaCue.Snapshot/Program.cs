@@ -100,6 +100,7 @@ try
                     OutputBaseName: Path.GetFileNameWithoutExtension(fileName)),
                 workerClient,
                 SubtitleBurnStyle.Default,
+                BurnSubtitleKind.Bilingual,
                 _ => { },
                 _ => { },
                 _ => { });

@@ -96,6 +96,14 @@
                 <CheckBox Content="同时生成原文 + 译文双语 SRT"
                           IsChecked="{Binding GenerateBilingual}"
                           IsEnabled="{Binding TranslateEnabled}" />
+                <StackPanel Spacing="4">
+                  <TextBlock Text="烧录字幕类型" Classes="caption" />
+                  <ComboBox ItemsSource="{Binding BurnSubtitleOptions}"
+                            SelectedItem="{Binding SelectedBurnSubtitle}" />
+                  <TextBlock Text="{Binding SelectedBurnSubtitle.Description}"
+                             Classes="caption"
+                             TextWrapping="Wrap" />
+                </StackPanel>
               </StackPanel>
 
               <Button Content="添加多个视频…"
@@ -201,7 +209,7 @@
                     Padding="24">
               <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
                 <TextBlock Text="还没有任务" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <TextBlock Text="点击“添加多个视频”，每个视频都会拥有独立进度、日志、取消和烧录操作。"
+                <TextBlock Text="点击“添加多个视频”，每个视频都会拥有独立进度、日志、取消和烧录状态。"
                            TextWrapping="Wrap"
                            TextAlignment="Center"
                            Classes="muted" />
@@ -259,11 +267,6 @@
                                   Theme="{DynamicResource OutlineButton}"
                                   Command="{Binding RetryCommand}"
                                   IsVisible="{Binding CanRetry}" />
-                          <Button Content="烧录字幕"
-                                  Classes="Success Small"
-                                  Theme="{DynamicResource OutlineButton}"
-                                  Command="{Binding BurnCommand}"
-                                  IsEnabled="{Binding CanBurn}" />
                         </StackPanel>
                       </Grid>
                     </Grid>
@@ -340,7 +343,7 @@
                 <ScrollViewer Margin="0,12,0,0" VerticalScrollBarVisibility="Auto">
                   <StackPanel Spacing="11" MaxWidth="720">
                     <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="9">
-                      <TextBlock Text="烧录字幕" Classes="caption" VerticalAlignment="Center" />
+                      <TextBlock Text="预览 / 导出字幕" Classes="caption" VerticalAlignment="Center" />
                       <ComboBox Grid.Column="1"
                                 ItemsSource="{Binding SelectedTask.SubtitleTracks}"
                                 SelectedItem="{Binding SelectedTask.SelectedSubtitleTrack}" />
@@ -366,7 +369,7 @@
                         <TextBox Grid.Column="1" Text="{Binding SelectedTask.BurnOutlineColor}" PlaceholderText="#000000" />
                       </Grid>
                     </Grid>
-                    <TextBlock Text="开始队列前可勾选自动烧录；未启用时仍可在任务卡片手动烧录。输出为新的 .subtitled.mp4，原视频不会被覆盖。"
+                    <TextBlock Text="在新任务设置中选择烧录类型，并在开始队列前勾选自动烧录；这里的字幕选择仅用于预览和导出。输出为新的 .subtitled.mp4，原视频不会被覆盖。"
                                Classes="caption"
                                TextWrapping="Wrap" />
                   </StackPanel>
@@ -403,7 +406,7 @@
                     IsChecked="{Binding BurnAfterConversion}"
                     IsEnabled="{Binding HasPendingTasks}"
                     VerticalAlignment="Center"
-                    ToolTip.Tip="开始队列时为全部待开始任务保存此选择；优先烧录双语字幕，其次译文、原文。" />
+                    ToolTip.Tip="开始队列时为全部待开始任务启用自动烧录，使用添加任务时选择的字幕类型。" />
           <Button Content="取消全部"
                   Classes="Danger Large"
                   Theme="{DynamicResource OutlineButton}"

@@ -16,6 +16,21 @@ public sealed record PerformanceProfileOption(
     public override string ToString() => DisplayName;
 }
 
+public enum BurnSubtitleKind
+{
+    Bilingual,
+    Source,
+    Target
+}
+
+public sealed record BurnSubtitleOption(
+    BurnSubtitleKind Value,
+    string DisplayName,
+    string Description)
+{
+    public override string ToString() => DisplayName;
+}
+
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     private readonly IStorageService storageService;
@@ -53,6 +68,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SelectedSourceLanguage = SourceLanguages[0];
         SelectedTargetLanguage = TargetLanguages[0];
         SelectedTranslationModel = TranslationModels[0];
+        SelectedBurnSubtitle = BurnSubtitleOptions[0];
         SelectedPerformanceProfile = PerformanceProfiles.First(option => option.Value == settings.PerformanceProfile);
         MaxConcurrentTasks = settings.MaxConcurrentTasks;
         scheduler.MaxConcurrency = MaxConcurrentTasks;
@@ -81,6 +97,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         new(PerformanceProfile.Fast, "GPU 极速", "Whisper 1/1 搜索，速度最快，准确率可能略有下降"),
         new(PerformanceProfile.Balanced, "GPU 平衡", "Whisper 3/3 搜索，默认兼顾速度与准确率"),
         new(PerformanceProfile.Quality, "最高质量", "Whisper 5/5 搜索，速度较慢")
+    ];
+
+    public IReadOnlyList<BurnSubtitleOption> BurnSubtitleOptions { get; } =
+    [
+        new(BurnSubtitleKind.Bilingual, "双语字幕", "同时显示原文和译文"),
+        new(BurnSubtitleKind.Source, "源语言字幕", "只烧录原文字幕"),
+        new(BurnSubtitleKind.Target, "目标语言字幕", "只烧录译文字幕")
     ];
 
     public ObservableCollection<SubtitleTaskViewModel> Tasks { get; } = [];
@@ -137,6 +160,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _generateBilingual = true;
 
     [ObservableProperty]
+    private BurnSubtitleOption _selectedBurnSubtitle;
+
+    [ObservableProperty]
     private bool _burnAfterConversion;
 
     [ObservableProperty]
@@ -159,6 +185,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (!value)
         {
             GenerateBilingual = false;
+            SelectedBurnSubtitle = BurnSubtitleOptions.First(option => option.Value == BurnSubtitleKind.Source);
+        }
+    }
+
+    partial void OnGenerateBilingualChanged(bool value)
+    {
+        if (!value && SelectedBurnSubtitle.Value == BurnSubtitleKind.Bilingual)
+        {
+            SelectedBurnSubtitle = BurnSubtitleOptions.First(option =>
+                option.Value == (TranslateEnabled ? BurnSubtitleKind.Target : BurnSubtitleKind.Source));
         }
     }
 
@@ -260,6 +296,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 request,
                 workerClient,
                 settings.BurnStyle,
+                SelectedBurnSubtitle.Value,
                 RetryTask,
                 QueueBurn,
                 SaveBurnDefaults);

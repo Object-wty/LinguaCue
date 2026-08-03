@@ -1,4 +1,7 @@
 using LinguaCue.Infrastructure;
+using LinguaCue.Models;
+using LinguaCue.Services;
+using LinguaCue.ViewModels;
 
 namespace LinguaCue.Tests;
 
@@ -36,6 +39,76 @@ public sealed class TaskOutputPathPlannerTests
     [InlineData("   ", "subtitles")]
     public void SanitizeFileName_ProducesPortableDirectoryName(string input, string expected) =>
         Assert.Equal(expected, TaskOutputPathPlanner.SanitizeFileName(input));
+
+    [Fact]
+    public void TryRelocatePendingOutput_UpdatesOnlyTaskThatHasNotStarted()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var task = CreateTask(root);
+            var customDirectory = Path.Combine(root, "custom-output", "lesson");
+
+            Assert.True(task.TryRelocatePendingOutput(customDirectory, "lesson"));
+            Assert.Equal(Path.GetFullPath(customDirectory), task.OutputDirectory);
+            Assert.Equal("lesson", task.Request.OutputBaseName);
+
+            task.State = SubtitleTaskState.Queued;
+            Assert.False(task.TryRelocatePendingOutput(
+                Path.Combine(root, "must-not-replace-queued-task"),
+                "ignored"));
+            Assert.Equal(Path.GetFullPath(customDirectory), task.OutputDirectory);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void MarkQueued_SnapshotsAutomaticBurnChoiceForThatQueueRun()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var task = CreateTask(root);
+
+            task.MarkQueued(autoBurnAfterConversion: true);
+
+            Assert.Equal(SubtitleTaskState.Queued, task.State);
+            Assert.True(task.AutoBurnAfterConversion);
+
+            task.State = SubtitleTaskState.Pending;
+            task.MarkQueued(autoBurnAfterConversion: false);
+            Assert.False(task.AutoBurnAfterConversion);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static SubtitleTaskViewModel CreateTask(string root)
+    {
+        var inputPath = Path.Combine(root, "source", "lesson.mp4");
+        var request = new PipelineRequest(
+            inputPath,
+            Path.Combine(root, "initial-output", "lesson"),
+            ModelCatalog.SourceLanguages[0],
+            ModelCatalog.TargetLanguages[0],
+            Translate: false,
+            GenerateBilingual: false,
+            ModelCatalog.TranslationProfiles[0],
+            OutputBaseName: "lesson");
+        return new SubtitleTaskViewModel(
+            request,
+            new SubtitleWorkerClient(PortableLayout.Create(root, root)),
+            SubtitleBurnStyle.Default,
+            BurnSubtitleKind.Source,
+            _ => { },
+            _ => { },
+            _ => { });
+    }
 
     private static string CreateTemporaryDirectory()
     {

@@ -34,6 +34,7 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
     private readonly Action<SubtitleTaskViewModel> retryAction;
     private readonly Action<SubtitleTaskViewModel> burnAction;
     private readonly Action<SubtitleBurnStyle> saveBurnDefaults;
+    private readonly BurnSubtitleKind burnSubtitleKind;
     private readonly Stopwatch stopwatch = new();
     private CancellationTokenSource? cancellation;
     private string? lastProgressDetail;
@@ -45,12 +46,14 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
         PipelineRequest request,
         SubtitleWorkerClient workerClient,
         SubtitleBurnStyle burnDefaults,
+        BurnSubtitleKind burnSubtitleKind,
         Action<SubtitleTaskViewModel> retryAction,
         Action<SubtitleTaskViewModel> burnAction,
         Action<SubtitleBurnStyle> saveBurnDefaults)
     {
         Request = request;
         this.workerClient = workerClient;
+        this.burnSubtitleKind = burnSubtitleKind;
         this.retryAction = retryAction;
         this.burnAction = burnAction;
         this.saveBurnDefaults = saveBurnDefaults;
@@ -72,9 +75,17 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
 
     public string OutputDirectory => Request.OutputDirectory;
 
-    public string ConfigurationText => Request.Translate
+    public string ConfigurationText => (Request.Translate
         ? $"{Request.SourceLanguage.DisplayName} → {Request.TargetLanguage.DisplayName} · {Request.TranslationModel.DisplayName}"
-        : $"{Request.SourceLanguage.DisplayName} · 仅转录";
+        : $"{Request.SourceLanguage.DisplayName} · 仅转录") +
+        $" · 烧录：{BurnSubtitleSelectionText}";
+
+    public string BurnSubtitleSelectionText => burnSubtitleKind switch
+    {
+        BurnSubtitleKind.Source => "源语言字幕",
+        BurnSubtitleKind.Target => "目标语言字幕",
+        _ => "双语字幕"
+    };
 
     public ObservableCollection<SubtitleCueViewModel> Cues { get; } = [];
 
@@ -94,7 +105,7 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
 
     public bool CanRetry => State is SubtitleTaskState.Failed or SubtitleTaskState.BurnFailed or SubtitleTaskState.Canceled;
 
-    public bool CanBurn => pipelineResult is not null && SelectedSubtitleTrack is not null && !IsActive && !IsQueued;
+    public bool CanBurn => pipelineResult is not null && GetBurnSubtitleTrack() is not null && !IsActive && !IsQueued;
 
     public bool HasBurnedVideo => !string.IsNullOrWhiteSpace(BurnedVideoPath);
 
@@ -175,7 +186,7 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
         if (burn)
         {
             queuedBurnStyle = GetBurnStyle();
-            queuedBurnSubtitlePath = SelectedSubtitleTrack?.Path;
+            queuedBurnSubtitlePath = GetBurnSubtitleTrack()?.Path;
             if (queuedBurnStyle is not null)
             {
                 saveBurnDefaults(queuedBurnStyle);
@@ -296,7 +307,7 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
         {
             State = SubtitleTaskState.Burning;
             StatusText = "正在烧录字幕";
-            StageText = SelectedSubtitleTrack?.DisplayName ?? Path.GetFileName(subtitlePath);
+            StageText = BurnSubtitleSelectionText;
             ProgressValue = 0;
             stopwatch.Restart();
             NotifyStateChanged();
@@ -366,6 +377,13 @@ public sealed partial class SubtitleTaskViewModel : ObservableObject
         BurnOutlineColor,
         Math.Clamp(BurnOutlineWidth, 0, 20),
         Math.Clamp(BurnMarginBottom, 0, 2000));
+
+    private SubtitleTrackOption? GetBurnSubtitleTrack() => burnSubtitleKind switch
+    {
+        BurnSubtitleKind.Source => SubtitleTracks.FirstOrDefault(track => track.DisplayName == "原文字幕"),
+        BurnSubtitleKind.Target => SubtitleTracks.FirstOrDefault(track => track.DisplayName == "译文字幕"),
+        _ => SubtitleTracks.FirstOrDefault(track => track.DisplayName == "双语字幕")
+    };
 
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel()
